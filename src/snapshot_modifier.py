@@ -2,12 +2,13 @@ import argparse
 import csv
 import os
 import pathlib
-import re
 import shutil
 import zipfile
 from pathlib import Path
 
-OUTPUT_DIR = "modified_zips"
+from src.mapping_functions import GroupMappingFunction, UserMappingFunction, ResolutionMappingFunction, MappingFunction
+
+OUTPUT_DIR = "./snapshots/modified_snapshots"
 
 
 def get_snapshot_file_dict(snapshot_directory):
@@ -48,8 +49,8 @@ def update_xml_file(xml_file, mapping_list):
     path = Path(xml_file)
     text = path.read_text()
 
-    for mapping in mapping_list:
-        text = mapping(text)
+    for mapping_function in mapping_list:
+        text = mapping_function.apply(text)
     path.write_text(text)
 
 
@@ -80,7 +81,7 @@ def initialize_args():
                         help="CSV file containing mapping instructions for user names")
     parser.add_argument("-r", "--resolution_mapping_file", type=argparse.FileType('r'), default=None,
                         help="CSV file containing mapping instructions for resolutions")
-    return parser.parse_args(['-g', './group_mapping.csv', '-u', './user_mapping.csv', "./test_snapshots"])
+    return parser.parse_args("-g ./group_mapping.csv -u ./user_mapping.csv ./snapshots/test_snapshots".split())
 
 
 def remove_unzipped_directories(snapshot_dict):
@@ -90,26 +91,20 @@ def remove_unzipped_directories(snapshot_dict):
 
 def create_group_mappings(group_mapping_file):
     group_reader = csv.DictReader(group_mapping_file) if group_mapping_file is not None else []
-    return [lambda text: re.sub(f'<groups nativeId="{row["old_name"]}" name="{row["old_name"]}"/>',
-                                f'<groups nativeId="{row["new_name"]}" name="{row["new_name"]}"/>', text
-                                ) for row in group_reader]
+    return [GroupMappingFunction(row) for row in group_reader]
 
 
 def create_user_mappings(user_mapping_file):
     user_reader = csv.DictReader(user_mapping_file) if user_mapping_file is not None else []
-    return [lambda text: re.sub(
-        f'<users nativeId="{row["old_name"]}" name="{row["old_name"]}" fullName="(.*?)" email="(.*?)"/>',
-        r'<users nativeId="%s" name="%s" fullName="\1" email="\2"/>' % (row["new_name"], row["new_name"]), text
-    ) for row in user_reader]
+    return [UserMappingFunction(row) for row in user_reader]
 
 
 def create_resolution_mappings(resolution_mapping_file):
     resolution_reader = csv.DictReader(resolution_mapping_file) if resolution_mapping_file is not None else []
-    return [lambda text: re.sub(f'<resolutions(.*)name="{row["old_name"]}"(.*)/>',
-                                r'<resolutions\1name="%s"\2/>' % row["new_name"]) for row in resolution_reader]
+    return [ResolutionMappingFunction(row) for row in resolution_reader]
 
 
-def create_mapping_list(group_mapping_file, user_mapping_file, resolution_mapping_file):
+def create_mapping_list(group_mapping_file, user_mapping_file, resolution_mapping_file) -> list[MappingFunction]:
     return create_group_mappings(group_mapping_file) \
            + create_user_mappings(user_mapping_file) \
            + create_resolution_mappings(resolution_mapping_file)
@@ -117,9 +112,9 @@ def create_mapping_list(group_mapping_file, user_mapping_file, resolution_mappin
 
 def modify_snapshots(parsed_args):
     snapshot_dict = get_snapshot_file_dict(parsed_args.snapshot_dir)
-    mapping_list = create_mapping_list(parsed_args.group_mapping_file,
-                                       parsed_args.user_mapping_file,
-                                       parsed_args.resolution_mapping_file)
+    mapping_list = create_mapping_list(group_mapping_file=parsed_args.group_mapping_file,
+                                       user_mapping_file=parsed_args.user_mapping_file,
+                                       resolution_mapping_file=parsed_args.resolution_mapping_file)
     unzip_snapshots(snapshot_dict)
     xml_files = get_xml_files_from_snapshot_directories(snapshot_dict)
     update_xmls(xml_files, mapping_list)
