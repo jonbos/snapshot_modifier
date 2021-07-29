@@ -49,8 +49,7 @@ def update_xml_file(xml_file, mapping_list):
     text = path.read_text()
 
     for mapping in mapping_list:
-        text = re.sub(mapping[0], mapping[1], text)
-
+        text = mapping(text)
     path.write_text(text)
 
 
@@ -81,7 +80,7 @@ def initialize_args():
                         help="CSV file containing mapping instructions for user names")
     parser.add_argument("-r", "--resolution_mapping_file", type=argparse.FileType('r'), default=None,
                         help="CSV file containing mapping instructions for resolutions")
-    return parser.parse_args()
+    return parser.parse_args(['-g', './group_mapping.csv', '-u', './user_mapping.csv', "./test_snapshots"])
 
 
 def remove_unzipped_directories(snapshot_dict):
@@ -91,34 +90,29 @@ def remove_unzipped_directories(snapshot_dict):
 
 def create_group_mappings(group_mapping_file):
     group_reader = csv.DictReader(group_mapping_file) if group_mapping_file is not None else []
-    return [(
-        f'<groups nativeId="{row["old_name"]}" name="{row["old_name"]}"/>',
-        f'<groups nativeId="{row["new_name"]}" name="{row["new_name"]}"/>'
-    ) for row in group_reader]
+    return [lambda text: re.sub(f'<groups nativeId="{row["old_name"]}" name="{row["old_name"]}"/>',
+                                f'<groups nativeId="{row["new_name"]}" name="{row["new_name"]}"/>', text
+                                ) for row in group_reader]
 
 
 def create_user_mappings(user_mapping_file):
-    group_reader = csv.DictReader(user_mapping_file) if user_mapping_file is not None else []
-    return [(
+    user_reader = csv.DictReader(user_mapping_file) if user_mapping_file is not None else []
+    return [lambda text: re.sub(
         f'<users nativeId="{row["old_name"]}" name="{row["old_name"]}" fullName="(.*?)" email="(.*?)"/>',
-        r'<users nativeId="%s" name="%s" fullName="\1" email="\2"/>' % (row["new_name"], row["new_name"]),
-    ) for row in group_reader]
+        r'<users nativeId="%s" name="%s" fullName="\1" email="\2"/>' % (row["new_name"], row["new_name"]), text
+    ) for row in user_reader]
 
 
 def create_resolution_mappings(resolution_mapping_file):
-    group_reader = csv.DictReader(resolution_mapping_file) if resolution_mapping_file is not None else []
-    return [(
-        f'<resolutions(.*)name="{row["old_name"]}"(.*)/>',
-        r'<resolutions\1name="%s"\2/>' % row["new_name"],
-    ) for row in group_reader]
+    resolution_reader = csv.DictReader(resolution_mapping_file) if resolution_mapping_file is not None else []
+    return [lambda text: re.sub(f'<resolutions(.*)name="{row["old_name"]}"(.*)/>',
+                                r'<resolutions\1name="%s"\2/>' % row["new_name"]) for row in resolution_reader]
 
 
 def create_mapping_list(group_mapping_file, user_mapping_file, resolution_mapping_file):
-    mapping_list = []
-    mapping_list += create_group_mappings(group_mapping_file)
-    mapping_list += create_user_mappings(user_mapping_file)
-    mapping_list += create_resolution_mappings(resolution_mapping_file)
-    return mapping_list
+    return create_group_mappings(group_mapping_file) \
+           + create_user_mappings(user_mapping_file) \
+           + create_resolution_mappings(resolution_mapping_file)
 
 
 def modify_snapshots(parsed_args):
