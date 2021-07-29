@@ -17,13 +17,9 @@ class MappingFunction(ABC):
 class GroupMappingFunction(MappingFunction):
     find_str = '<groups nativeId="{old_name}" name="{old_name}"/>'
     replace_str = '<groups nativeId="{new_name}" name="{new_name}"/>'
-
-
 class UserMappingFunction(MappingFunction):
-    find_str = '<groups nativeId="{old_name}" name="{old_name}"/>'
-    replace_str = '<groups nativeId="{new_name}" name="{new_name}"/>'
-
-
+    find_str = '<users nativeId="{old_name}" name="{old_name}" fullName="(.*?)" email="(.*?)"/>'
+    replace_str = '<users nativeId="{new_name}" name="{new_name}" fullName="\1" email="\2"/>'
 class ResolutionMappingFunction(MappingFunction):
     find_str = '<groups nativeId="{old_name}" name="{old_name}"/>'
     replace_str = '<groups nativeId="{new_name}" name="{new_name}"/>'
