@@ -1,4 +1,5 @@
 # Usage
+
 ```
 positional arguments:
   snapshot_dir          Path to directory containing the snapshots to be modified
