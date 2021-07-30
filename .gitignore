@@ -1,0 +1,10 @@
+bin/
+include/
+lib/
+.idea/
+mapping_files/
+snapshots/
+.DS_Store
+*__pycache__*
+test_out/
+
