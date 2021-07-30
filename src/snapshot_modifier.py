@@ -118,15 +118,16 @@ def modify_snapshots(parsed_args):
 def initialize_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("snapshot_zips", nargs="+",
-                        help="Path to directory containing the snapshots to be modified")
+                        help="One or more CMJ Snapshot .zip files containing values to be mapped")
     parser.add_argument("-g", "--group_mapping_file", type=argparse.FileType('r'), default=None,
                         help="CSV file containing mapping instructions for group names")
     parser.add_argument("-u", "--user_mapping_file", type=argparse.FileType('r'), default=None,
                         help="CSV file containing mapping instructions for user names")
     parser.add_argument("-r", "--resolution_mapping_file", type=argparse.FileType('r'), default=None,
                         help="CSV file containing mapping instructions for resolutions")
-    return parser.parse_args(
-        "-g ../mapping_files/group_mapping.csv -u ../mapping_files/user_mapping.csv ../snapshots/test_snapshots/kmj.zip".split())
+    # return parser.parse_args(
+    #     "-g ../mapping_files/group_mapping.csv -u ../mapping_files/user_mapping.csv ../snapshots/test_snapshots/kmj.zip".split())
+    return parser.parse_args("-h".split())
 
 
 if __name__ == '__main__':
